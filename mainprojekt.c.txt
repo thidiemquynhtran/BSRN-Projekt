@@ -1,4 +1,3 @@
-mainprojekt.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -68,12 +67,9 @@ void report_process(int socket) {
     }
 }
 
-void sigint_handler(int signum) {
-    // Signalhandler für SIGINT (Strg+C)
-    // Ressourcen freigeben und das Programm ordnungsgemäß beenden
-    // Hier den Code zum Schließen von Sockets, Freigeben von Speicher usw. hinzufügen
-
-    // Sockets schließen
+void sigint_handler(int signum, int conv_sockets[2], int log_sockets[2], int stat_sockets[2], int report_sockets[2], pid_t conv_pid, pid_t log_pid, pid_t stat_pid, pid_t report_pid) {
+    // Signal handler logic
+    // Close sockets
     close(conv_sockets[0]);
     close(conv_sockets[1]);
     close(log_sockets[0]);
@@ -83,23 +79,26 @@ void sigint_handler(int signum) {
     close(report_sockets[0]);
     close(report_sockets[1]);
 
-    // Kindprozesse beenden
+    // Terminate child processes
     kill(conv_pid, SIGKILL);
     kill(log_pid, SIGKILL);
     kill(stat_pid, SIGKILL);
     kill(report_pid, SIGKILL);
 
-    // Auf das Beenden der Kindprozesse warten
+    // Wait for child processes to exit
     int status;
     pid_t pid;
     while ((pid = wait(&status)) > 0) {
-        printf("Kindprozess mit PID %d beendet.\n", pid);
+        printf("Child process with PID %d exited.\n", pid);
     }
 
-    // Speicher freigeben, falls zutreffend
+    // Free any applicable memory
 
     exit(0);
 }
+
+int main() {
+
 
 int main() {
     signal(SIGINT, sigint_handler); // SIGINT-Signalhandler registrieren
