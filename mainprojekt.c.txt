@@ -12,113 +12,121 @@
 #define BUFFER_SIZE 1024
 
 void conv_process(int socket) {
-    // Logik des Conv-Prozesses
-    // Zufallszahlen generieren und über den Socket senden
-    srand(getpid()); // Zufallszahlengenerator mit der Prozess-ID initialisieren
+    // Logic of the Conv process
+    // Generate random numbers and send them over the socket
+    srand(getpid()); // Initialize the random number generator with the process ID
 
     while (1) {
         int random_number = rand() % 100;
-        printf("Generierte Zufallszahl: %d\n", random_number);
+        printf("Generated random number: %d\n", random_number);
 
-        // Zufallszahl über den Socket senden
-        send(socket, &random_number, sizeof(random_number), 0);
-        sleep(1); // 1 Sekunde warten zwischen dem Senden von Zahlen
+        // Send the random number over the socket
+        if (send(socket, &random_number, sizeof(random_number), 0) == -1) {
+            perror("Error sending data");
+            exit(1);
+        }
+        sleep(1); // Wait for 1 second between sending numbers
     }
 }
 
 void log_process(int socket) {
-    // Logik des Log-Prozesses
-    // Werte vom Conv-Prozess über den Socket empfangen und ausgeben
+    // Logic of the Log process
+    // Receive values from the Conv process and write them to a local file
+    FILE *file = fopen("log.txt", "w");
+    if (file == NULL) {
+        perror("Error opening file");
+        exit(1);
+    }
+
     int received_number;
 
     while (1) {
-        recv(socket, &received_number, sizeof(received_number), 0);
-        printf("Empfangene Zahl: %d\n", received_number);
+        if (recv(socket, &received_number, sizeof(received_number), 0) == -1) {
+            perror("Error receiving data");
+            exit(1);
+        }
+        printf("Received number: %d\n", received_number);
+
+        fprintf(file, "%d\n", received_number);
+        fflush(file); // Flush the file buffer to ensure immediate write
     }
+
+    fclose(file);
 }
 
 void stat_process(int socket) {
-    // Logik des Stat-Prozesses
-    // Werte vom Conv-Prozess über den Socket empfangen und statistische Berechnungen durchführen
+    // Logic of the Stat process
+    // Receive values from the Conv process, perform statistical calculations, and send the results to the Report process
     int received_number;
     int sum = 0;
     int count = 0;
 
     while (1) {
-        recv(socket, &received_number, sizeof(received_number), 0);
-        printf("Empfangene Zahl: %d\n", received_number);
+        if (recv(socket, &received_number, sizeof(received_number), 0) == -1) {
+            perror("Error receiving data");
+            exit(1);
+        }
+        printf("Received number: %d\n", received_number);
 
         sum += received_number;
         count++;
 
         double average = (double) sum / count;
-        printf("Summe: %d, Durchschnitt: %.2f\n", sum, average);
+        printf("Sum: %d, Average: %.2f\n", sum, average);
+
+        // Send the calculated statistics to the Report process
+        if (send(socket, &average, sizeof(average), 0) == -1) {
+            perror("Error sending data");
+            exit(1);
+        }
     }
 }
 
 void report_process(int socket) {
-    // Logik des Report-Prozesses
-    // Werte vom Stat-Prozess über den Socket empfangen und Berichte generieren
-    int received_number;
+    // Logic of the Report process
+    // Receive values from the Stat process and generate reports
+    double received_average;
 
     while (1) {
-        recv(socket, &received_number, sizeof(received_number), 0);
-        printf("Empfangene Zahl: %d\n", received_number);
+        if (recv(socket, &received_average, sizeof(received_average), 0) == -1) {
+            perror("Error receiving data");
+            exit(1);
+        }
+        printf("Received average: %.2f\n", received_average);
+
+        // Generate reports based on the received data
+        // Add your report generation logic here
     }
 }
 
-void sigint_handler(int signum, int conv_sockets[2], int log_sockets[2], int stat_sockets[2], int report_sockets[2], pid_t conv_pid, pid_t log_pid, pid_t stat_pid, pid_t report_pid) {
+void sigint_handler(int signum) {
     // Signal handler logic
-    // Close sockets
-    close(conv_sockets[0]);
-    close(conv_sockets[1]);
-    close(log_sockets[0]);
-    close(log_sockets[1]);
-    close(stat_sockets[0]);
-    close(stat_sockets[1]);
-    close(report_sockets[0]);
-    close(report_sockets[1]);
+    // Close sockets and exit gracefully
 
-    // Terminate child processes
-    kill(conv_pid, SIGKILL);
-    kill(log_pid, SIGKILL);
-    kill(stat_pid, SIGKILL);
-    kill(report_pid, SIGKILL);
-
-    // Wait for child processes to exit
-    int status;
-    pid_t pid;
-    while ((pid = wait(&status)) > 0) {
-        printf("Child process with PID %d exited.\n", pid);
-    }
-
-    // Free any applicable memory
+    // Free any other resources (e.g., shared memory, semaphores) if applicable
 
     exit(0);
 }
 
 int main() {
-
-
-int main() {
-    signal(SIGINT, sigint_handler); // SIGINT-Signalhandler registrieren
+    signal(SIGINT, sigint_handler); // Register SIGINT signal handler
 
     pid_t conv_pid, log_pid, stat_pid, report_pid;
     int conv_sockets[2], log_sockets[2], stat_sockets[2], report_sockets[2];
 
-    // Sockets für die Kommunikation zwischen Prozessen erstellen
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, conv_sockets) < 0 ||
-        socketpair(AF_UNIX, SOCK_STREAM, 0, log_sockets) < 0 ||
-        socketpair(AF_UNIX, SOCK_STREAM, 0, stat_sockets) < 0 ||
-        socketpair(AF_UNIX, SOCK_STREAM, 0, report_sockets) < 0) {
-        perror("Fehler beim Erstellen der Sockets");
+    // Create sockets for inter-process communication
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, conv_sockets) == -1 ||
+        socketpair(AF_UNIX, SOCK_STREAM, 0, log_sockets) == -1 ||
+        socketpair(AF_UNIX, SOCK_STREAM, 0, stat_sockets) == -1 ||
+        socketpair(AF_UNIX, SOCK_STREAM, 0, report_sockets) == -1) {
+        perror("Error creating sockets");
         exit(1);
     }
 
-    // Conv-Prozess starten
+    // Conv process
     conv_pid = fork();
     if (conv_pid == 0) {
-        // Kindprozess: Conv
+        // Child process: Conv
         close(conv_sockets[0]);
         close(log_sockets[0]);
         close(stat_sockets[0]);
@@ -127,19 +135,19 @@ int main() {
         conv_process(conv_sockets[1]);
         exit(0);
     } else if (conv_pid > 0) {
-        // Elternprozess
-        printf("Conv-Prozess gestartet mit PID: %d\n", conv_pid);
+        // Parent process
+        printf("Conv process started with PID: %d\n", conv_pid);
         close(conv_sockets[1]);
     } else {
-        // Fork fehlgeschlagen
-        perror("Fehler beim Starten des Conv-Prozesses");
+        // Fork failed
+        perror("Error forking Conv process");
         exit(1);
     }
 
-    // Log-Prozess starten
+    // Log process
     log_pid = fork();
     if (log_pid == 0) {
-        // Kindprozess: Log
+        // Child process: Log
         close(log_sockets[0]);
         close(conv_sockets[0]);
         close(stat_sockets[0]);
@@ -148,19 +156,19 @@ int main() {
         log_process(log_sockets[1]);
         exit(0);
     } else if (log_pid > 0) {
-        // Elternprozess
-        printf("Log-Prozess gestartet mit PID: %d\n", log_pid);
+        // Parent process
+        printf("Log process started with PID: %d\n", log_pid);
         close(log_sockets[1]);
     } else {
-        // Fork fehlgeschlagen
-        perror("Fehler beim Starten des Log-Prozesses");
+        // Fork failed
+        perror("Error forking Log process");
         exit(1);
     }
 
-    // Stat-Prozess starten
+    // Stat process
     stat_pid = fork();
     if (stat_pid == 0) {
-        // Kindprozess: Stat
+        // Child process: Stat
         close(stat_sockets[0]);
         close(conv_sockets[0]);
         close(log_sockets[0]);
@@ -169,19 +177,19 @@ int main() {
         stat_process(stat_sockets[1]);
         exit(0);
     } else if (stat_pid > 0) {
-        // Elternprozess
-        printf("Stat-Prozess gestartet mit PID: %d\n", stat_pid);
+        // Parent process
+        printf("Stat process started with PID: %d\n", stat_pid);
         close(stat_sockets[1]);
     } else {
-        // Fork fehlgeschlagen
-        perror("Fehler beim Starten des Stat-Prozesses");
+        // Fork failed
+        perror("Error forking Stat process");
         exit(1);
     }
 
-    // Report-Prozess starten
+    // Report process
     report_pid = fork();
     if (report_pid == 0) {
-        // Kindprozess: Report
+        // Child process: Report
         close(report_sockets[0]);
         close(conv_sockets[0]);
         close(log_sockets[0]);
@@ -190,21 +198,22 @@ int main() {
         report_process(report_sockets[1]);
         exit(0);
     } else if (report_pid > 0) {
-        // Elternprozess
-        printf("Report-Prozess gestartet mit PID: %d\n", report_pid);
+        // Parent process
+        printf("Report process started with PID: %d\n", report_pid);
         close(report_sockets[1]);
     } else {
-        // Fork fehlgeschlagen
-        perror("Fehler beim Starten des Report-Prozesses");
+        // Fork failed
+        perror("Error forking Report process");
         exit(1);
     }
 
-    // Auf Beendigung aller Kindprozesse warten
+    // Wait for all child processes to exit
     int status;
     pid_t pid;
     while ((pid = wait(&status)) > 0) {
-        printf("Kindprozess mit PID %d beendet.\n", pid);
+        printf("Child process with PID %d exited.\n", pid);
     }
 
     return 0;
 }
+
