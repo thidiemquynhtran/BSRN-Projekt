@@ -1,4 +1,5 @@
 # BSRN-Projekt 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -161,7 +162,7 @@ int main() {
         perror("Fehler beim Erstellen des Shared Memory");
         exit(1);
     }
-    
+    //SM ANÄgen
     SharedData* shared_data = (SharedData*) shmat(shm_id, NULL, 0);
     if (shared_data == (void*) -1) {
         perror("Fehler beim Anhängen des Shared Memory");
@@ -229,3 +230,7 @@ int main() {
     //alle drei benutzen ps, pstree, top?
     // Programm  mit   Ctrl-C abgebrochen -> Signalhandler Signal SIGINT implementieren. Beachten Sie bitte, dass beim Abbruch des Programms alle von den Prozessen belegten Betriebsmittel (Pipes, Message Queues, gemeinsame Speicherberei- che, Semaphoren) freigegeben werden.
     //Überwachen Sie  Shared Memory-Bereiche und Semaphoren mit dem Kommando ipcs. Mit ipcrm können Sie Message Queues, Shared Memory-Bereiche und Semaphoren wieder freigeben, wenn Ihr Programm die- ses bei einer inkorrekten Beendigung versäumt hat.
+
+        
+      
+      
