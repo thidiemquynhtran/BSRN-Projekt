@@ -154,7 +154,7 @@ int main() {
     if (shm_id == -1) {
         perror("Fehler beim Erstellen des gemeinsamen Speichersegments");
         exit(1);
-    }
+    } printf("Shared Memory ID: %d\n", shm_id);
 
     // Gemeinsamen Speicher anzeigen
     SharedData* shared_data = (SharedData*)shmat(shm_id, NULL, 0);
@@ -166,7 +166,7 @@ int main() {
     
 
     // Initialisierung des gemeinsamen Speichers
-    shared_data->data = 10;
+    shared_data->data = 0;
     shared_data->is_valid = 0;
     shared_data->sum = 0;
     shared_data->count = 0;
@@ -174,6 +174,7 @@ int main() {
 
     // Semaphore initialisieren
     int sem_id = initialize_semaphore();
+    printf("Semaphore ID: %d\n", sem_id);
 
     // Kindprozess (conv) erstellen
     pid_t conv_pid = fork();
@@ -225,17 +226,25 @@ int main() {
     if (shmdt(shared_data) == -1) {
         perror("Fehler beim Trennen des gemeinsamen Speichers");
         exit(1);
+    } else {
+        printf("Shared Memory getrennt.\n");
     }
 
     // Gemeinsamen Speicher entfernen
     if (shmctl(shm_id, IPC_RMID, NULL) == -1) {
         perror("Fehler beim Entfernen des gemeinsamen Speichers");
+    }else {
+        printf("Shared Memory entfernt.\n");
     }
 
     // Semaphore entfernen
     if (semctl(sem_id, 0, IPC_RMID) == -1) {
         perror("Fehler beim Entfernen des Semaphors");
+    }else {
+        printf("Semaphore entfernt.\n");
     }
 
     return 0;
 }
+
+    //FERTIG 
