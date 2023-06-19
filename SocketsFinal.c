@@ -17,7 +17,6 @@
 
 pid_t conv_pid, log_pid, stat_pid, report_pid;
     int conv_sockets[2], log_sockets[2], stat_sockets[2], report_sockets[2];
-//int sem_id;
 
 void conv_process(int socket) {
     // Logik des Conv-Prozesses
@@ -27,7 +26,6 @@ void conv_process(int socket) {
     while (1) {
         int random_number = rand() % 100;
         printf("Generierte Zufallszahl: %d\n", random_number);
-        //semaphore_lock(sem_id);
         // Zufallszahl über den Socket senden
         //kill(log_pid,SIGSTOP);
        // kill(stat_pid,SIGSTOP);
@@ -37,7 +35,7 @@ void conv_process(int socket) {
        // kill(stat_pid,SIGCONT);
         //printf("semaphore passed: conv\n ");
         sleep(1); // 1 Sekunde warten zwischen dem Senden von Zahlen
-        //semaphore_unlock(sem_id);
+
         kill(log_pid,SIGCONT);
         kill(stat_pid,SIGCONT);
 
@@ -52,12 +50,21 @@ void log_process(int socket) {
     int received_number;
 
     while (1) {
-        //semaphore_lock(sem_id);
 
         recv(socket, &received_number, sizeof(received_number), 0);
+         FILE *file =
+          fopen("sockets.txt", "a"); // Beispielhafte Datei zum Schreiben öffnen
+      if (file == NULL) {
+        perror("fopen - Log");
+        exit(1);
+      }
+      fprintf(file, "%d\n",received_number); // Messwert in die Datei schreiben
+      fclose(file);
+    
+    
+   
         printf("Empfangene Zahl Log: %d\n", received_number);
-       // semaphore_unlock(sem_id);
-       // printf("semaphore passed: log ");
+       
 
     }
 }
@@ -70,14 +77,13 @@ void stat_process(int socket) {
     int count = 0;
 
     while (1) {
-        printf("********* stat 1:\n");
-        //semaphore_lock(sem_id);
-               // printf("********* stat 4:\n");
+        printf("********* stat :\n" );
+       
 
         recv(socket, &received_number, sizeof(received_number), 0);
                // printf("********* stat 5:\n");
 
-        printf("Empfangene Zahl Stat: %d\n", received_number);
+       printf("Empfangene Zahl Stat: %d\n", received_number);
 
         sum += received_number;
         count++;
@@ -87,10 +93,12 @@ void stat_process(int socket) {
         // Summe über den Socket senden
         send(stat_sockets[1], &sum, sizeof(sum), 0);
         // Mitelwerte über den Socket senden
-        sleep(1);
+        send(stat_sockets[1], &average, sizeof (average), 0);
+        
+       sleep(1);
         //send(socket, &average, sizeof(average), 0);
-       // sleep(1);
-               //printf("********* stat 2:\n");
+        //sleep(1);
+             //  printf("********* stat 2:\n");
 
        
         kill(report_pid,SIGCONT);
@@ -102,14 +110,13 @@ void report_process(int socket) {
     // Logik des Report-Prozesses
     // Werte vom Stat-Prozess über den Socket empfangen und Berichte generieren
     int received_number;
-
+    double average;
+    
     while (1) {
-    //    semaphore_lock(sem_id);
         recv(socket, &received_number, sizeof(received_number), 0);
         printf("Empfangene Zahl Rep: %d\n", received_number);
-         //recv(socket, &received_number, sizeof(received_number), 0);
-        //printf("Empfangene Zahl Rep: %d\n", received_number);
-    //    semaphore_unlock(sem_id);
+         recv(socket, &average, sizeof(average), 0);
+        printf("Empfangene Zahl Rep: %f\n", average);
 
     }
 }
@@ -147,41 +154,7 @@ void sigint_handler(int signum) {
     exit(0);
 }
 
-// Funktion, um Semaphore zu erstellen
-/*int initialize_semaphore() {
-    int sem_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0666);
-    if (sem_id == -1) {
-        perror("Fehler beim Erstellen des Semaphors");
-        exit(1);
-    }
-    // Semaphore auf 1 erstellen
-    if (semctl(sem_id, 0, SETVAL, 1) == -1) {
-        perror("Fehler beim Initialisieren des Semaphors");
-        exit(1);
-    }
-    return sem_id;
-}
 
-
-void semaphore_lock(int sem_id) {
-    struct sembuf p_operation = {0, -1, 0}; // Semaphor-Operation: P
-    
-    if (semop(sem_id, &p_operation, 1) == -1) {
-        perror("Fehler beim Sperren des Semaphors");
-        exit(1);
-    }
-}
-
-// Funktion, um Semaphore freizugeben
-void semaphore_unlock (int sem_id) {
-    struct sembuf v_operation = {0, 1, 0}; // Semaphor-Operation: V
-    if (semop(sem_id, &v_operation, 1) == -1) {
-        perror("Fehler beim Freigeben des Semaphors");
-        exit(1);
-    }
-}
-
-*/
 int main() {
     signal(SIGINT, sigint_handler); // SIGINT-Signalhandler registrieren
 
@@ -196,8 +169,7 @@ int main() {
         perror("Fehler beim Erstellen der Sockets");
         exit(1);
     }
-// Semaphore initialisieren
-    //sem_id = initialize_semaphore();
+
     // Conv-Prozess starten
     conv_pid = fork();
     if (conv_pid == 0) {
