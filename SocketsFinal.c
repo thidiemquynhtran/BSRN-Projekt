@@ -21,21 +21,24 @@ pid_t conv_pid, log_pid, stat_pid, report_pid;
 void conv_process(int socket) {
     // Logik des Conv-Prozesses
     // Zufallszahlen generieren und über den Socket senden
-    srand(getpid()); // Zufallszahlengenerator mit der Prozess-ID initialisieren
+   
+    //srand(getpid()); // Zufallszahlengenerator mit der Prozess-ID initialisieren
 
     while (1) {
         int random_number = rand() % 100;
         printf("Generierte Zufallszahl: %d\n", random_number);
         // Zufallszahl über den Socket senden
+                send(socket, &random_number, sizeof(random_number), 0);
+
+
         //kill(log_pid,SIGSTOP);
        // kill(stat_pid,SIGSTOP);
-        send(socket, &random_number, sizeof(random_number), 0);
 
        // kill(log_pid,SIGCONT);
        // kill(stat_pid,SIGCONT);
         //printf("semaphore passed: conv\n ");
         sleep(1); // 1 Sekunde warten zwischen dem Senden von Zahlen
-
+        //semaphore_unlock(sem_id);
         kill(log_pid,SIGCONT);
         kill(stat_pid,SIGCONT);
 
@@ -49,10 +52,11 @@ void log_process(int socket) {
     // Werte vom Conv-Prozess über den Socket empfangen und ausgeben
     int received_number;
 
+
     while (1) {
 
         recv(socket, &received_number, sizeof(received_number), 0);
-         FILE *file =
+              FILE *file =
           fopen("sockets.txt", "a"); // Beispielhafte Datei zum Schreiben öffnen
       if (file == NULL) {
         perror("fopen - Log");
@@ -60,11 +64,9 @@ void log_process(int socket) {
       }
       fprintf(file, "%d\n",received_number); // Messwert in die Datei schreiben
       fclose(file);
-    
-    
-   
         printf("Empfangene Zahl Log: %d\n", received_number);
-       
+       // semaphore_unlock(sem_id);
+       // printf("semaphore passed: log ");
 
     }
 }
@@ -77,13 +79,14 @@ void stat_process(int socket) {
     int count = 0;
 
     while (1) {
-        printf("********* stat :\n" );
-       
+        printf("********* stat 1:\n");
+        //semaphore_lock(sem_id);
+               // printf("********* stat 4:\n");
 
         recv(socket, &received_number, sizeof(received_number), 0);
                // printf("********* stat 5:\n");
 
-       printf("Empfangene Zahl Stat: %d\n", received_number);
+        printf("Empfangene Zahl Stat: %d\n", received_number);
 
         sum += received_number;
         count++;
@@ -93,14 +96,15 @@ void stat_process(int socket) {
         // Summe über den Socket senden
         send(stat_sockets[1], &sum, sizeof(sum), 0);
         // Mitelwerte über den Socket senden
-        send(stat_sockets[1], &average, sizeof (average), 0);
-        
-       sleep(1);
-        //send(socket, &average, sizeof(average), 0);
-        //sleep(1);
-             //  printf("********* stat 2:\n");
+        send(stat_sockets[1], &average, sizeof(average), 0);
 
-       
+        sleep(1);
+        //send(socket, &average, sizeof(average), 0);
+       // sleep(1);
+               //printf("********* stat 2:\n");
+
+      
+
         kill(report_pid,SIGCONT);
 
     }
@@ -109,14 +113,18 @@ void stat_process(int socket) {
 void report_process(int socket) {
     // Logik des Report-Prozesses
     // Werte vom Stat-Prozess über den Socket empfangen und Berichte generieren
-    int received_number;
+    int sum;
     double average;
-    
+
     while (1) {
-        recv(socket, &received_number, sizeof(received_number), 0);
-        printf("Empfangene Zahl Rep: %d\n", received_number);
-         recv(socket, &average, sizeof(average), 0);
-        printf("Empfangene Zahl Rep: %f\n", average);
+        recv(socket, &sum, sizeof(sum), 0);
+        recv(socket, &average, sizeof(average), 0);
+
+        printf("Empfangene Summe Rep: %d\n", sum);
+        printf("Empfangene Durchschnitt Rep: %.2f\n", average);
+
+         //recv(socket, &received_number, sizeof(received_number), 0);
+        //printf("Empfangene Zahl Rep: %d\n", received_number);
 
     }
 }
@@ -153,6 +161,10 @@ void sigint_handler(int signum) {
 
     exit(0);
 }
+
+
+
+
 
 
 int main() {
