@@ -143,6 +143,8 @@ int main(int argc, char **argv) {
     sem_id = initialize_semaphore();
     printf("Semaphore ID: %d\n", sem_id);
 
+    
+    //conv erstellen 
     conv_pid = fork();
     if (conv_pid == -1) {
         perror("Fehler beim Erstellen des Konversionsprozesses");
@@ -212,7 +214,7 @@ int main(int argc, char **argv) {
     } else if (stat_pid == 0) {
         printf("Stat Prozess - PID: %d, PPID: %d\n", getpid(), getppid());
         // Kindprozess 'stat' hat Zugriff auf shared_memory_data
-        double sum = 0;
+        double sum = 0.0;
         int count = 0;
         double average = 0.0;
 
@@ -262,7 +264,7 @@ int main(int argc, char **argv) {
             double average = shared_memory_data[NUM_RANDOM_NUMBERS + 2];
 
             // Statistische Daten ausgeben
-            printf("Summe: %.2f, Anzahl: %d, Durchschnitt: %.2f\n", sum, count, average);
+           printf("Summe: %.0f, Anzahl: %d, Durchschnitt: %.2f\n", sum, count, average);
 
             // Semaphore freigeben
             semaphore_unlock(sem_id);
