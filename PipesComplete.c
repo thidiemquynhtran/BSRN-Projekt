@@ -79,7 +79,7 @@ main ()
 	  write (conv_stat[1], &value, sizeof (int));
 
 	  // Kurze Pause einbauen
-	  usleep (100000);
+	  usleep (500000);
 	}
     }
   else if (convPID > 0)
