@@ -69,8 +69,8 @@ main ()
       // While-Schleife starten
       while (1)
 	{
-	  // Zufallszahl zwischen 0 und 99 generieren und speichern
-	  int value = rand () % 100;
+	  // Zufallszahl zwischen 0 und 100 generieren und speichern
+	  int value = rand () % 101;
 
 	  // Messwert fuer Log reinschreiben
 	  write (conv_log[1], &value, sizeof (int));
