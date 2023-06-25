@@ -54,6 +54,7 @@ main ()
 
   if (convPID == 0)
     {
+      // PID's von Conv und Elternprozess ausgeben
       printf ("\n Conv: PID: %i, PPID: %i\n", getpid (), getppid ());
 
       // Conv-Prozess
@@ -62,9 +63,10 @@ main ()
       close (conv_stat[0]);	// Lese-Ende schliessen
       close (stat_report[0]);	// Lese-Ende schliessen
 
-      // Seed initialisieren fue Wertegenerierung
+      // Seed initialisieren fuer Wertegenerierung
       srand (time (NULL));
 
+      // While-Schleife starten
       while (1)
 	{
 	  // Zufallszahl zwischen 0 und 99 generieren und speichern
@@ -93,18 +95,20 @@ main ()
 
       if (logPID == 0)
 	{
+	  // PID's von Log und Elternprozess ausgeben
 	  printf ("\n Log: PID: %i, PPID: %i\n", getpid (), getppid ());
 
 	  // Log-Prozess
 	  close (conv_log[1]);	// Schreib-Ende schliessen
 
+	  // Lokale Datei oeffnen
 	  FILE *fp = fopen ("log.txt", "w");
 	  if (fp == NULL)
 	    {
 	      perror ("Fehler beim oeffnen der log.txt Datei");
 	      exit (1);
 	    }
-
+	  // While-Schleife
 	  while (1)
 	    {
 	      int zahl;
@@ -118,7 +122,7 @@ main ()
 	      // Flushe den Dateipuffer
 	      fflush (fp);
 	    }
-
+	  // Datei schliessen
 	  fclose (fp);
 	}
       else if (logPID > 0)
@@ -134,6 +138,7 @@ main ()
 
 	  if (statPID == 0)
 	    {
+	      // PID's von Stat und Elternprozess ausgeben
 	      printf ("\n Stat: PID: %i, PPID: %i\n", getpid (), getppid ());
 
 	      // Stat-Prozess
@@ -143,6 +148,7 @@ main ()
 	      int sum = 0;
 	      int zaehler = 0;
 
+	      // While-Schleife
 	      while (1)
 		{
 		  int messwert;
@@ -172,6 +178,7 @@ main ()
 
 	      if (reportPID == 0)
 		{
+		  // PID's von Report und Elternprozess ausgeben
 		  printf ("\n Report: PID: %i, PPID: %i\n", getpid (),
 			  getppid ());
 
@@ -179,6 +186,7 @@ main ()
 
 		  close (stat_report[1]);	// Schreib-Ende schliessen
 
+		  // While-Schleife
 		  while (1)
 		    {
 		      int sum;
