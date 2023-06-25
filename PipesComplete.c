@@ -54,6 +54,8 @@ main ()
 
   if (convPID == 0)
     {
+      printf ("\n Conv: PID: %i, PPID: %i\n", getpid (), getppid ());
+
       // Conv-Prozess
 
       close (conv_log[0]);	// Lese-Ende schliessen 
@@ -91,6 +93,8 @@ main ()
 
       if (logPID == 0)
 	{
+	  printf ("\n Log: PID: %i, PPID: %i\n", getpid (), getppid ());
+
 	  // Log-Prozess
 	  close (conv_log[1]);	// Schreib-Ende schliessen
 
@@ -130,6 +134,7 @@ main ()
 
 	  if (statPID == 0)
 	    {
+	      printf ("\n Stat: PID: %i, PPID: %i\n", getpid (), getppid ());
 
 	      // Stat-Prozess
 	      close (conv_stat[1]);	// Schreib-Ende schliessen
@@ -167,6 +172,9 @@ main ()
 
 	      if (reportPID == 0)
 		{
+		  printf ("\n Report: PID: %i, PPID: %i\n", getpid (),
+			  getppid ());
+
 		  // Report-Prozess
 
 		  close (stat_report[1]);	// Schreib-Ende schliessen
