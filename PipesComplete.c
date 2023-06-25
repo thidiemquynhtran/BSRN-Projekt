@@ -78,7 +78,7 @@ main ()
 	  // Messwert fuer Stat reinschreiben
 	  write (conv_stat[1], &value, sizeof (int));
 
-	  // Kurze Pause einbauen
+	  // Pausen einbauen, damit Ausgabe uebersichtlicher aussieht
 	  usleep (500000);
 	}
     }
