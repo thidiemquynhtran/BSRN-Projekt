@@ -18,30 +18,29 @@
 pid_t conv_pid, log_pid, stat_pid, report_pid;
     int conv_sockets[2], log_sockets[2], stat_sockets[2], report_sockets[2];
 
+struct stat {
+    int sum;
+    int average;
+    
+} ;
+
 void conv_process(int socket) {
     // Logik des Conv-Prozesses
-    // Zufallszahlen generieren und über den Socket senden
    
-    //srand(getpid()); // Zufallszahlengenerator mit der Prozess-ID initialisieren
+    // Zufallszahlen generieren und über den Socket senden
+    
+    srand(getpid()); // Zufallszahlengenerator mit der Prozess-ID initialisieren
 
     while (1) {
+      
         int random_number = rand() % 100;
-        printf("Generierte Zufallszahl: %d\n", random_number);
-        // Zufallszahl über den Socket senden
-                send(socket, &random_number, sizeof(random_number), 0);
 
+        send(socket, &random_number, sizeof(random_number), 0);
 
-        //kill(log_pid,SIGSTOP);
-       // kill(stat_pid,SIGSTOP);
-
-       // kill(log_pid,SIGCONT);
-       // kill(stat_pid,SIGCONT);
-        //printf("semaphore passed: conv\n ");
+       
         sleep(1); // 1 Sekunde warten zwischen dem Senden von Zahlen
-        //semaphore_unlock(sem_id);
-        kill(log_pid,SIGCONT);
-        kill(stat_pid,SIGCONT);
 
+        
     }
         
 
@@ -49,24 +48,31 @@ void conv_process(int socket) {
 
 void log_process(int socket) {
     // Logik des Log-Prozesses
-    // Werte vom Conv-Prozess über den Socket empfangen und ausgeben
-    int received_number;
-
+   
+    int received_number; // Werte vom Conv-Prozess über den Socket empfangen und ausgeben
 
     while (1) {
 
         recv(socket, &received_number, sizeof(received_number), 0);
-              FILE *file =
-          fopen("sockets.txt", "a"); // Beispielhafte Datei zum Schreiben öffnen
-      if (file == NULL) {
+
+        FILE *file =
+        fopen("sockets.txt", "a"); // Beispielhafte Datei zum Schreiben öffnen
+      
+        if (file == NULL) {
         perror("fopen - Log");
         exit(1);
-      }
+      
+            
+        }
+        
       fprintf(file, "%d\n",received_number); // Messwert in die Datei schreiben
+     
       fclose(file);
-        printf("Empfangene Zahl Log: %d\n", received_number);
-       // semaphore_unlock(sem_id);
-       // printf("semaphore passed: log ");
+     
+        send(log_sockets[1], &received_number, sizeof(received_number), 0);
+       
+       
+      
 
     }
 }
@@ -79,33 +85,24 @@ void stat_process(int socket) {
     int count = 0;
 
     while (1) {
-        printf("********* stat 1:\n");
-        //semaphore_lock(sem_id);
-               // printf("********* stat 4:\n");
 
-        recv(socket, &received_number, sizeof(received_number), 0);
-               // printf("********* stat 5:\n");
-
-        printf("Empfangene Zahl Stat: %d\n", received_number);
-
+        recv(log_sockets[0], &received_number, sizeof(received_number), 0);
+        
         sum += received_number;
         count++;
-
         double average = (double) sum / count;
-        printf("Summe: %d, Durchschnitt: %.2f\n", sum, average);
-        // Summe über den Socket senden
-        send(stat_sockets[1], &sum, sizeof(sum), 0);
-        // Mitelwerte über den Socket senden
-        send(stat_sockets[1], &average, sizeof(average), 0);
+       
+        // Summe und Durschnitt über den Socket senden
+        struct stat st;
+        st.sum=sum;
+        st.average=average;
+        
+        send(stat_sockets[1], &st, sizeof(st), 0);
+        
+
+
 
         sleep(1);
-        //send(socket, &average, sizeof(average), 0);
-       // sleep(1);
-               //printf("********* stat 2:\n");
-
-      
-
-        kill(report_pid,SIGCONT);
 
     }
 }
@@ -113,19 +110,14 @@ void stat_process(int socket) {
 void report_process(int socket) {
     // Logik des Report-Prozesses
     // Werte vom Stat-Prozess über den Socket empfangen und Berichte generieren
-    int sum;
-    double average;
+    int received_number;
+    struct stat st;
 
     while (1) {
-        recv(socket, &sum, sizeof(sum), 0);
-        recv(socket, &average, sizeof(average), 0);
 
-        printf("Empfangene Summe Rep: %d\n", sum);
-        printf("Empfangene Durchschnitt Rep: %.2f\n", average);
-
-         //recv(socket, &received_number, sizeof(received_number), 0);
-        //printf("Empfangene Zahl Rep: %d\n", received_number);
-
+        recv(socket, &st, sizeof(st), 0);
+        printf("Empfangene Zahlen Report : summe: %d - durchshnitt: %d\n", st.sum, st.average);
+        
     }
 }
 
@@ -163,16 +155,11 @@ void sigint_handler(int signum) {
 }
 
 
-
-
-
-
+ 
 int main() {
     signal(SIGINT, sigint_handler); // SIGINT-Signalhandler registrieren
 
-    /*pid_t conv_pid, log_pid, stat_pid, report_pid;
-    int conv_sockets[2], log_sockets[2], stat_sockets[2], report_sockets[2];*/
-
+  
     // Sockets für die Kommunikation zwischen Prozessen erstellen
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, conv_sockets) < 0 ||
         socketpair(AF_UNIX, SOCK_STREAM, 0, log_sockets) < 0 ||
@@ -187,9 +174,6 @@ int main() {
     if (conv_pid == 0) {
         // Kindprozess: Conv
         close(conv_sockets[0]);
-        //close(log_sockets[0]);
-        //close(stat_sockets[0]);
-        //close(report_sockets[0]);
         conv_process(conv_sockets[1]);
         exit(0);
     } else if (conv_pid > 0) {
@@ -207,16 +191,13 @@ int main() {
     if (log_pid == 0) {
         // Kindprozess: Log
         close(log_sockets[0]);
-        //close(conv_sockets[0]);
-        //close(stat_sockets[0]);
-        //close(report_sockets[0]);
         log_process(conv_sockets[0]);
         exit(0);
     } else if (log_pid > 0) {
         // Elternprozess
         printf("Log-Prozess gestartet mit PID: %d\n", log_pid);
         close(log_sockets[1]);
-        kill(log_pid,SIGSTOP);
+       // kill(log_pid,SIGSTOP);
     } else {
         // Fork fehlgeschlagen
         perror("Fehler beim Starten des Log-Prozesses");
@@ -228,16 +209,13 @@ int main() {
     if (stat_pid == 0) {
         // Kindprozess: Stat
         close(stat_sockets[0]);
-       // close(conv_sockets[0]);
-       // close(log_sockets[0]);
-      //  close(report_sockets[0]);
         stat_process(conv_sockets[0]);
         exit(0);
     } else if (stat_pid > 0) {
         // Elternprozess
         printf("Stat-Prozess gestartet mit PID: %d\n", stat_pid);
         close(stat_sockets[1]);
-        kill(stat_pid,SIGSTOP);
+        //kill(stat_pid,SIGSTOP);
     } else {
         // Fork fehlgeschlagen
         perror("Fehler beim Starten des Stat-Prozesses");
@@ -249,17 +227,12 @@ int main() {
     if (report_pid == 0) {
         // Kindprozess: Report
         close(report_sockets[0]);
-      //  close(conv_sockets[0]);
-     //   close(log_sockets[0]);
-      //  close(stat_sockets[0]);
-
         report_process(stat_sockets[0]);
         exit(0);
     } else if (report_pid > 0) {
         // Elternprozess
         printf("Report-Prozess gestartet mit PID: %d\n", report_pid);
         close(report_sockets[1]);
-        kill(report_pid,SIGSTOP);
 
     } else {
         // Fork fehlgeschlagen
