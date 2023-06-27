@@ -1,4 +1,11 @@
-#include <signal.h>
+// Dieses Programm hatte Fehler bei Lesen von Log und Stat
+// Log und Stat erhalten bei jedem Durchlauf verchiedene Zahlen
+
+// Problem: Conv schreibt den Wert nur in eine Nachrichtenschlange 
+// Nachricht geht verloren nach dem Lesen von Log
+// Lösung: Conv schreibt gleichzeitig in die zwei Nachrichtenschlange (siehe MessageQueuesFinal.c)
+
+##include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
